@@ -1,0 +1,37 @@
+@baseUrl = https://fastapi-skeleton.fly.dev
+
+###
+# @name registerAPI
+POST {{baseUrl}}/auth/register HTTP/1.1
+content-type: application/json
+
+{
+  "email": "abcd@def.com",
+  "password": "ab12@"
+}
+
+
+###
+# @name tokenAPI
+POST {{baseUrl}}/auth/token HTTP/1.1
+content-type: application/json
+
+{
+  "email": "abcd@def.com",
+  "password": "ab12@"
+}
+
+###
+@authToken = {{tokenAPI.response.body.access_token}}
+GET {{baseUrl}}/auth/me HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+###
+# @name logoutAPI
+@authToken = {{tokenAPI.response.body.access_token}}
+POST {{baseUrl}}/auth/logout HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+###
+GET {{baseUrl}}/info HTTP/1.1
+Authorization: Bearer {{authToken}}

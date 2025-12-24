@@ -1,0 +1,42 @@
+name: Deploy to Fly per branch
+
+on:
+  push:
+    branches:
+      - "**"
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if FLY_API_TOKEN secret is configured
+    if: ${{ vars.ENABLE_FLY_DEPLOY == 'true' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@v1
+
+      - name: Set app name from branch
+        id: vars
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's#[^a-z0-9-]#-#g')
+          echo "app_name=fastapi-skeleton-$SAFE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create Fly app if missing
+        run: |
+          APP="${{ steps.vars.outputs.app_name }}"
+          flyctl apps list | grep -q "^$APP$" \
+            || flyctl apps create "$APP"
+
+      - name: Deploy
+        run: |
+          flyctl deploy \
+            --app "${{ steps.vars.outputs.app_name }}" \
+            --remote-only

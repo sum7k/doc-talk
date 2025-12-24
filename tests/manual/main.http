@@ -1,0 +1,14 @@
+### Environment Variables
+@baseUrl = http://localhost:8000
+
+### Health Check
+# @name healthCheck
+GET {{baseUrl}}/health HTTP/1.1
+
+### Readiness
+# @name readiness
+GET {{baseUrl}}/ready HTTP/1.1
+
+### Metrics
+# @name metrics
+GET {{baseUrl}}/metrics HTTP/1.1

@@ -103,4 +103,4 @@ async def test_create_access_token_uses_correct_algorithm_and_issuer(token_servi
     decoded = jwt.decode(
         token, token_service.secret_key, algorithms=[token_service.algorithm]
     )
-    assert decoded["iss"] == "fastapi-skeleton"
+    assert decoded["iss"] == "doc-talk"

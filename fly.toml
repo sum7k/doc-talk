@@ -1,9 +1,5 @@
-# fly.toml app configuration file generated for fastapi-skeleton on 2025-12-17T16:51:44+05:30
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
 
-app = 'fastapi-skeleton'
+app = 'doc-talk'
 primary_region = 'bom'
 
 [build]

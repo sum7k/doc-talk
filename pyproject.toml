@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fastapi-skeleton"
+name = "doc-talk"
 version = "0.1.0"
-description = "A FastAPI project skeleton with authentication, database integration, and observability."
+description = "DocTalk is an AI-powered Q&A application over document collections."
 authors = ["Sumeet Kumar"]
 license = "Unlicense"
 readme = "README.md"

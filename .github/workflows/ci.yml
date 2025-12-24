@@ -10,7 +10,7 @@ env:
   PYTHON_VERSION: "3.11"
   POETRY_VERSION: "1.8.0"
   POETRY_CACHE_DIR: ~/.cache/pypoetry
-  DB_URL_OVERRIDE: sqlite+aiosqlite:///./fastapi-skeleton.db
+  DB_URL_OVERRIDE: sqlite+aiosqlite:///./dock-talk.db
   JWT_SECRET_KEY: ev0KuHxe2VokQSuKVKURS3YSpfT9D2nyemLuBjeUAsx
 
 jobs:

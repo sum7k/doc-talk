@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sample HTML Document</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>Navigation Menu</nav>
+    </header>
+
+    <main>
+        <h1>Sample HTML Document</h1>
+
+        <p>This is a test HTML document used for parser integration testing.</p>
+
+        <h2>Features</h2>
+        <ul>
+            <li>HTML parsing with BeautifulSoup</li>
+            <li>Script and style removal</li>
+            <li>Clean text extraction</li>
+        </ul>
+
+        <h2>Content Section</h2>
+        <p>
+            This section contains additional content to verify that the HTML parser
+            correctly extracts text while removing HTML tags and structural elements.
+        </p>
+
+        <article>
+            <h3>Article Title</h3>
+            <p>Article content goes here. This demonstrates nested HTML elements.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>Footer content - should be removed by parser</p>
+    </footer>
+
+    <script>
+        console.log("This script should be removed");
+    </script>
+</body>
+</html>

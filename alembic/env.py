@@ -13,7 +13,7 @@ target_metadata = Base.metadata
 
 # Get the database URL and convert async URL to sync for Alembic
 settings = get_settings()
-db_url = settings.db_url
+db_url = settings.db.url
 
 # Convert async URLs to sync URLs for Alembic migrations
 if db_url.startswith("sqlite+aiosqlite://"):

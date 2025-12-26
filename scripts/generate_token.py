@@ -28,9 +28,9 @@ def generate_token(
     """Generate a JWT token for testing"""
     settings = get_settings()
 
-    if not settings.jwt_secret_key:
-        print("❌ Error: JWT_SECRET_KEY not set in environment")
-        print("Set it with: export JWT_SECRET_KEY='your-secret-key'")
+    if not settings.jwt.secret_key:
+        print("❌ Error: JWT__SECRET_KEY not set in environment")
+        print("Set it with: export JWT__SECRET_KEY='your-secret-key'")
         sys.exit(1)
 
     user_id = str(uuid.uuid4())
@@ -45,7 +45,7 @@ def generate_token(
         "iss": "doc-talk",
     }
 
-    token = jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
+    token = jwt.encode(payload, settings.jwt.secret_key, algorithm="HS256")
 
     print("\n✅ JWT Token Generated Successfully")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

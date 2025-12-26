@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 import structlog
-from fastapi import Depends, FastAPI, Response, status
+from fastapi import FastAPI, Response, status
 from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -17,8 +17,6 @@ from core.exceptions import (
 )
 from core.logging import setup_logging
 from core.readiness import check_db_readiness
-from core.security import RequireMember
-from core.settings import Settings, get_settings
 from core.tracing import setup_tracing
 from middleware import CorrelationIdMiddleware, PrometheusMetricsMiddleware
 
@@ -87,14 +85,6 @@ async def ready():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"status": "not_ready"},
         )
-
-
-@app.get("/info")
-def info(user: RequireMember, settings: Settings = Depends(get_settings)):
-    logger.info("handling info request", user_id=user.id)
-    return {
-        "db": settings.db_url,
-    }
 
 
 @app.get("/metrics", include_in_schema=False)

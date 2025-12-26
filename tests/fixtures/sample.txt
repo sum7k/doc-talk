@@ -1,0 +1,19 @@
+Sample Plain Text Document
+
+This is a test plain text document used for parser integration testing.
+
+Section 1: Introduction
+-----------------------
+Plain text files are simple and widely used for storing textual information.
+They contain no formatting, just raw text content.
+
+Section 2: Content
+------------------
+This section contains additional content to ensure the parser handles
+multi-line text files correctly. The parser should extract all text
+as a single page.
+
+Section 3: Conclusion
+---------------------
+This document demonstrates that the text parser can handle standard
+plain text files with multiple sections and paragraphs.

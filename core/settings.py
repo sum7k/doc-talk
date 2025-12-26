@@ -1,8 +1,8 @@
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal, Union
 
 from fastapi import Depends
-from pydantic import Field, field_validator
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,34 +10,48 @@ class JWTConfig(BaseSettings):
     """JWT configuration with validation."""
 
     secret_key: str = Field(
-        ..., min_length=32, description="JWT secret key (min 32 chars)"
+        default="",
+        min_length=0,
+        description="JWT secret key (min 32 chars for production)",
     )
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    @field_validator("secret_key")
-    @classmethod
-    def validate_secret_key(cls, v: str) -> str:
-        if len(v) < 32:
-            raise ValueError(
-                "JWT secret key must be at least 32 characters long for security"
-            )
-        return v
+    model_config = SettingsConfigDict(env_prefix="JWT_")
 
 
 class DatabaseConfig(BaseSettings):
     """Database configuration."""
 
-    url: str = Field(..., description="Database connection URL")
+    host: str = "localhost"
+    port: int = 5432
+    name: str = ""
+    user: str = ""
+    password: str = ""
+    url_override: str = (
+        ""  # Optional: Override constructed URL (for testing with SQLite)
+    )
     echo: bool = False
     pool_size: int = 5
     max_overflow: int = 10
 
-    @field_validator("url")
+    model_config = SettingsConfigDict(env_prefix="DB_")
+
+    @computed_field
+    def url(self) -> str:
+        """Construct database URL from individual components.
+
+        If url_override is set (e.g., for testing with SQLite), use that instead.
+        """
+        if self.url_override:
+            return self.url_override
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
+
+    @field_validator("url_override")
     @classmethod
     def validate_db_url(cls, v: str) -> str:
         if not v:
-            raise ValueError("Database URL cannot be empty")
+            return v
         if not (
             v.startswith("postgresql://")
             or v.startswith("postgresql+asyncpg://")
@@ -49,46 +63,67 @@ class DatabaseConfig(BaseSettings):
         return v
 
 
+Provider = Literal["openai", "local"]
+
+
+class EmbeddingsConfig(BaseSettings):
+    provider: Provider = "openai"
+    model: str = "text-embedding-3-small"
+    version: str = "v1"
+    timeout: float = 30.0
+    batch_size: int = 100
+    namespace: str = "doc-talk"
+
+    # provider-specific (used only when relevant)
+    api_key: str | None = None
+    model_config = SettingsConfigDict(env_prefix="EMBEDDINGS_")
+
+
+class VectorStoreConfigBase(BaseSettings):
+    """Vector store configuration."""
+
+
+class PgVectorConfig(VectorStoreConfigBase):
+    backend: str = "pgvector"
+    dsn: str = ""
+    pool_min_size: int = 5
+    pool_max_size: int = 20
+    model_config = SettingsConfigDict(env_prefix="PG_VECTOR_")
+
+
+class QdrantConfig(VectorStoreConfigBase):
+    backend: str = "qdrant"
+    url: str
+    api_key: str | None = None
+    collection_name: str = "embeddings"
+    vector_size: int
+    distance: Literal["cosine", "euclidean", "dot"] = "cosine"
+    on_disk: bool = False
+    model_config = SettingsConfigDict(env_prefix="QDRANT_")
+
+
+VectorStoreConfig = Union[PgVectorConfig, QdrantConfig]
+
+
 class Settings(BaseSettings):
     """Application settings."""
 
     service_name: str = "doc-talk"
-    db_host: str = "localhost"
-    db_port: int = 5432
-    db_name: str = ""
-    db_user: str = ""
-    db_password: str = ""
-    db_url_override: str = (
-        ""  # Optional: Override constructed URL (for testing with SQLite)
-    )
-    jwt_secret_key: str = ""
     otlp_endpoint: str = ""  # Jaeger OTLP endpoint
     log_level: str = "INFO"
 
-    # tell pydantic where/how to load configuration
+    # Nested configurations
+    db: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    jwt: JWTConfig = Field(default_factory=JWTConfig)
+    vector_store: VectorStoreConfig = Field(default_factory=PgVectorConfig)
+    embeddings_config: EmbeddingsConfig = Field(default_factory=EmbeddingsConfig)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        env_nested_delimiter="__",
         extra="ignore",
     )
-
-    @property
-    def db_url(self) -> str:
-        """Construct database URL from individual components.
-
-        If db_url_override is set (e.g., for testing with SQLite), use that instead.
-        """
-        if self.db_url_override:
-            return self.db_url_override
-        return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-
-    def get_jwt_config(self) -> JWTConfig:
-        """Get JWT configuration from settings."""
-        return JWTConfig(secret_key=self.jwt_secret_key)
-
-    def get_database_config(self) -> DatabaseConfig:
-        """Get database configuration from settings."""
-        return DatabaseConfig(url=self.db_url)
 
 
 @lru_cache()

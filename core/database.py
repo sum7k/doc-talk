@@ -18,14 +18,13 @@ class Base(DeclarativeBase):
 
 # Get database configuration
 settings = get_settings()
-db_config = settings.get_database_config()
 
 # Create async engine with configuration
 engine = create_async_engine(
-    db_config.url,
-    echo=db_config.echo,
-    pool_size=db_config.pool_size,
-    max_overflow=db_config.max_overflow,
+    settings.db.url,
+    echo=settings.db.echo,
+    pool_size=settings.db.pool_size,
+    max_overflow=settings.db.max_overflow,
 )
 
 SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)

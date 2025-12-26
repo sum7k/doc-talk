@@ -13,7 +13,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 fastapi = "^0.100.0"
 uvicorn = "^0.23.0"
 sqlalchemy = "^2.0.0"
@@ -48,9 +48,15 @@ opentelemetry-exporter-otlp = "^1.39.1"
 opentelemetry-instrumentation-fastapi = "^0.60b1"
 opentelemetry-instrumentation-asgi = "^0.60b1"
 opentelemetry-instrumentation-sqlalchemy = "^0.60b1"
+pdfplumber = "^0.11.8"
+llm-kit = {git = "https://github.com/sum7k/llm-kit.git"}
+pypdf = "^6.5.0"
+python-docx = "^1.2.0"
+beautifulsoup4 = "^4.14.3"
 
 [tool.poetry.group.dev.dependencies]
-httpx = "^0.24.1"
+httpx = "^0.28.1"
+reportlab = "^4.4.7"
 
 [tool.poetry.scripts]
 # Remove the dev script - use 'poetry run uvicorn main:app --reload' instead

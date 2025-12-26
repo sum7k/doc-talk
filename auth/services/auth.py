@@ -207,8 +207,7 @@ def get_token_service(
 ) -> TokenService:
     """Dependency to get token service instance."""
     token_repository = TokenRepository(session)
-    jwt_config = settings.get_jwt_config()
-    return TokenService(token_repository, jwt_config)
+    return TokenService(token_repository, settings.jwt)
 
 
 def get_auth_service(

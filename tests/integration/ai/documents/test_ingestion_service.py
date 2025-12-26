@@ -1,5 +1,4 @@
 # tests/integration/test_ingestion_service.py
-import os
 import time
 
 import pytest
@@ -16,22 +15,7 @@ from ai.documents.repositories.document import (
 )
 from ai.documents.services.ingestion import DocumentIngestionService
 from core.database import Base
-
-# Ensure Docker socket is accessible (needed for Colima and other non-standard Docker setups)
-if not os.environ.get("DOCKER_HOST"):
-    # Try common locations
-    for socket_path in [
-        "/var/run/docker.sock",
-        os.path.expanduser("~/.colima/default/docker.sock"),
-        os.path.expanduser("~/.docker/run/docker.sock"),
-    ]:
-        if os.path.exists(socket_path):
-            os.environ["DOCKER_HOST"] = f"unix://{socket_path}"
-            break
-
-# Disable Ryuk container for Colima compatibility
-# Ryuk requires mounting Docker socket which doesn't work well with Colima
-os.environ["TESTCONTAINERS_RYUK_DISABLED"] = "true"
+from tests.integration.ai.documents.conftest import init_vector_schema
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
@@ -61,32 +45,7 @@ def sync_url(postgres_container):
 @pytest.fixture(scope="module")
 def _init_vector_schema(sync_url):
     """Initialize pgvector extension and vector_items table."""
-    import psycopg
-
-    # Retry connection a few times to wait for container
-    max_retries = 10
-    for attempt in range(max_retries):
-        try:
-            with psycopg.connect(sync_url) as conn:
-                conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-                conn.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS vector_items (
-                        namespace TEXT NOT NULL,
-                        id TEXT NOT NULL,
-                        embedding VECTOR(16) NOT NULL,
-                        metadata JSONB NOT NULL,
-                        PRIMARY KEY (namespace, id)
-                    );
-                """
-                )
-                conn.commit()
-            break
-        except psycopg.OperationalError:
-            if attempt < max_retries - 1:
-                time.sleep(1)
-            else:
-                raise
+    init_vector_schema(sync_url, embedding_dim=16)
 
 
 @pytest_asyncio.fixture(scope="module")

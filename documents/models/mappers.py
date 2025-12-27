@@ -4,8 +4,8 @@ This module creates specific mapper instances for Document, Page, and Chunk enti
 using the generic mapper from core infrastructure, with custom handling for nested relationships.
 """
 
-from ai.documents.models.db import Chunk, Document, Page
-from ai.documents.models.domain import (
+from documents.models.db import Chunk, Document, Page
+from documents.models.domain import (
     ChunkDTO,
     CreateChunkDTO,
     CreateDocumentDTO,
@@ -141,7 +141,7 @@ class DocumentMapper(GenericMapper[DocumentDTO, Document]):
             status=model.status,
             chunk_size=model.chunk_size,
             chunk_overlap=model.chunk_overlap,
-            binary_content=model.binary_content,
+            file_path=model.file_path,
             display_title=model.display_title,
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -157,7 +157,7 @@ class DocumentMapper(GenericMapper[DocumentDTO, Document]):
             source_name=create_dto.source_name,
             chunk_size=create_dto.chunk_size,
             chunk_overlap=create_dto.chunk_overlap,
-            binary_content=create_dto.binary_content,
+            file_path=create_dto.file_path,
             display_title=create_dto.display_title,
             status=create_dto.status,
         )

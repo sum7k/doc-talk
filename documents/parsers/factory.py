@@ -1,4 +1,4 @@
-from ai.documents.models.schemas import FileType
+from documents.models.schemas import FileType
 
 from .docx_parser import DocxParser
 from .html_parser import HtmlParser

@@ -4,7 +4,7 @@ import structlog
 from docx import Document
 from opentelemetry import trace
 
-from ai.documents.models.domain import PageSchema
+from documents.models.domain import PageSchema
 
 logger = structlog.get_logger()
 tracer = trace.get_tracer(__name__)

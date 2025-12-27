@@ -2,10 +2,11 @@
 import uuid
 
 import pytest
+import pytest_asyncio
 from qdrant_client.models import Distance
 
-from ai.documents.models.domain import EmbeddingContext
-from ai.documents.services.dense_retrieval import DenseRetrievalService
+from documents.models.domain import EmbeddingContext
+from documents.services.dense_retrieval import DenseRetrievalService
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
@@ -69,13 +70,13 @@ def embedding_context():
     )
 
 
-@pytest.fixture(scope="module")
-def seeded_vector_store(vector_store, embedding_client, embedding_context):
+@pytest_asyncio.fixture(scope="module")
+async def seeded_vector_store(vector_store, embedding_client, embedding_context):
     """Embed sample texts and insert them into the vector store."""
     from llm_kit.vectorstores.types import VectorItem
 
     # Embed all sample texts
-    embeddings = embedding_client.embed(texts=SAMPLE_TEXTS)
+    embeddings = await embedding_client.embed(texts=SAMPLE_TEXTS)
 
     # Create vector items with metadata (using UUIDs for Qdrant in-memory mode)
     items = []
@@ -93,16 +94,21 @@ def seeded_vector_store(vector_store, embedding_client, embedding_context):
         items.append(item)
 
     # Upsert all items into the vector store
-    vector_store.upsert(
+    await vector_store.upsert(
         namespace=embedding_context.namespace,
         items=items,
     )
 
-    return vector_store
+    yield vector_store
+
+    # Cleanup
+    await vector_store.close()
 
 
-@pytest.fixture
-def dense_retrieval_service(seeded_vector_store, embedding_client, embedding_context):
+@pytest_asyncio.fixture
+async def dense_retrieval_service(
+    seeded_vector_store, embedding_client, embedding_context
+):
     """Create DenseRetrievalService with real dependencies."""
     return DenseRetrievalService(
         embedding_client=embedding_client,
@@ -127,7 +133,9 @@ class TestDenseRetrievalServiceIntegration:
         assert len(results) > 0
         assert len(results) <= 3
 
-    async def test_retrieve_returns_relevant_results_for_ml_query(self, dense_retrieval_service):
+    async def test_retrieve_returns_relevant_results_for_ml_query(
+        self, dense_retrieval_service
+    ):
         """Verify ML-related queries return ML-related documents."""
         query = "artificial intelligence and machine learning"
         results = await dense_retrieval_service.retrieve(query, top_k=3)
@@ -136,13 +144,21 @@ class TestDenseRetrievalServiceIntegration:
         top_texts = [r.metadata.get("text", "") for r in results]
 
         # At least one result should be ML/AI related
-        ml_keywords = ["machine learning", "artificial intelligence", "neural", "deep learning"]
+        ml_keywords = [
+            "machine learning",
+            "artificial intelligence",
+            "neural",
+            "deep learning",
+        ]
         has_relevant_result = any(
-            any(keyword in text.lower() for keyword in ml_keywords) for text in top_texts
+            any(keyword in text.lower() for keyword in ml_keywords)
+            for text in top_texts
         )
         assert has_relevant_result, f"Expected ML-related results, got: {top_texts}"
 
-    async def test_retrieve_returns_relevant_results_for_animals_query(self, dense_retrieval_service):
+    async def test_retrieve_returns_relevant_results_for_animals_query(
+        self, dense_retrieval_service
+    ):
         """Verify animal-related queries return animal-related documents."""
         query = "pets and animals behavior"
         results = await dense_retrieval_service.retrieve(query, top_k=3)
@@ -152,11 +168,14 @@ class TestDenseRetrievalServiceIntegration:
         # Check for animal-related content
         animal_keywords = ["fox", "dog", "cats", "animals"]
         has_relevant_result = any(
-            any(keyword in text.lower() for keyword in animal_keywords) for text in top_texts
+            any(keyword in text.lower() for keyword in animal_keywords)
+            for text in top_texts
         )
         assert has_relevant_result, f"Expected animal-related results, got: {top_texts}"
 
-    async def test_retrieve_returns_relevant_results_for_programming_query(self, dense_retrieval_service):
+    async def test_retrieve_returns_relevant_results_for_programming_query(
+        self, dense_retrieval_service
+    ):
         """Verify programming-related queries return programming-related documents."""
         query = "coding and software development"
         results = await dense_retrieval_service.retrieve(query, top_k=3)
@@ -166,9 +185,12 @@ class TestDenseRetrievalServiceIntegration:
         # Check for programming-related content
         programming_keywords = ["python", "programming", "language", "data science"]
         has_relevant_result = any(
-            any(keyword in text.lower() for keyword in programming_keywords) for text in top_texts
+            any(keyword in text.lower() for keyword in programming_keywords)
+            for text in top_texts
         )
-        assert has_relevant_result, f"Expected programming-related results, got: {top_texts}"
+        assert has_relevant_result, (
+            f"Expected programming-related results, got: {top_texts}"
+        )
 
     async def test_retrieve_respects_top_k_parameter(self, dense_retrieval_service):
         """Verify top_k parameter limits the number of results."""
@@ -182,7 +204,9 @@ class TestDenseRetrievalServiceIntegration:
         assert len(results_5) == 5
         assert len(results_10) == 10
 
-    async def test_retrieve_results_have_expected_structure(self, dense_retrieval_service):
+    async def test_retrieve_results_have_expected_structure(
+        self, dense_retrieval_service
+    ):
         """Verify results have the expected QueryResult structure."""
         query = "coffee and beverages"
         results = await dense_retrieval_service.retrieve(query, top_k=1)
@@ -200,7 +224,9 @@ class TestDenseRetrievalServiceIntegration:
         assert "embedding_model_name" in result.metadata
         assert "embedding_version" in result.metadata
 
-    async def test_retrieve_results_ordered_by_similarity(self, dense_retrieval_service):
+    async def test_retrieve_results_ordered_by_similarity(
+        self, dense_retrieval_service
+    ):
         """Verify results are ordered by similarity score (descending)."""
         query = "neural networks and deep learning"
         results = await dense_retrieval_service.retrieve(query, top_k=5)
@@ -208,9 +234,13 @@ class TestDenseRetrievalServiceIntegration:
         scores = [r.score for r in results]
 
         # Scores should be in descending order (most similar first)
-        assert scores == sorted(scores, reverse=True), "Results should be ordered by similarity"
+        assert scores == sorted(scores, reverse=True), (
+            "Results should be ordered by similarity"
+        )
 
-    async def test_retrieve_with_exact_text_match_returns_high_score(self, dense_retrieval_service):
+    async def test_retrieve_with_exact_text_match_returns_high_score(
+        self, dense_retrieval_service
+    ):
         """Verify querying with exact text returns a high similarity score."""
         # Use one of the sample texts as the query
         exact_query = "Machine learning is a subset of artificial intelligence."
@@ -218,13 +248,21 @@ class TestDenseRetrievalServiceIntegration:
 
         assert len(results) == 1
         # The exact match should have a very high similarity score
-        assert results[0].score > 0.9, f"Expected high score for exact match, got {results[0].score}"
+        assert results[0].score > 0.9, (
+            f"Expected high score for exact match, got {results[0].score}"
+        )
         assert results[0].metadata["text"] == exact_query
 
-    async def test_retrieve_different_queries_return_different_results(self, dense_retrieval_service):
+    async def test_retrieve_different_queries_return_different_results(
+        self, dense_retrieval_service
+    ):
         """Verify different queries return different top results."""
-        weather_results = await dense_retrieval_service.retrieve("sunny weather forecast", top_k=1)
-        finance_results = await dense_retrieval_service.retrieve("stock market trading", top_k=1)
+        weather_results = await dense_retrieval_service.retrieve(
+            "sunny weather forecast", top_k=1
+        )
+        finance_results = await dense_retrieval_service.retrieve(
+            "stock market trading", top_k=1
+        )
 
         # Top results should be different
         assert weather_results[0].id != finance_results[0].id

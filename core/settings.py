@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Annotated, Literal, Union
 
 from fastapi import Depends
@@ -17,37 +16,18 @@ class JWTConfig(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    model_config = SettingsConfigDict(env_prefix="JWT_")
-
 
 class DatabaseConfig(BaseSettings):
     """Database configuration."""
 
-    host: str = "localhost"
-    port: int = 5432
-    name: str = ""
-    user: str = ""
-    password: str = ""
-    url_override: str = (
-        ""  # Optional: Override constructed URL (for testing with SQLite)
-    )
+    url: str = ""
     echo: bool = False
     pool_size: int = 5
     max_overflow: int = 10
 
-    model_config = SettingsConfigDict(env_prefix="DB_")
+    model_config = SettingsConfigDict(extra="ignore")
 
-    @computed_field
-    def url(self) -> str:
-        """Construct database URL from individual components.
-
-        If url_override is set (e.g., for testing with SQLite), use that instead.
-        """
-        if self.url_override:
-            return self.url_override
-        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
-
-    @field_validator("url_override")
+    @field_validator("url")
     @classmethod
     def validate_db_url(cls, v: str) -> str:
         if not v:
@@ -76,33 +56,31 @@ class EmbeddingsConfig(BaseSettings):
 
     # provider-specific (used only when relevant)
     api_key: str | None = None
-    model_config = SettingsConfigDict(env_prefix="EMBEDDINGS_")
 
 
-class VectorStoreConfigBase(BaseSettings):
-    """Vector store configuration."""
-
-
-class PgVectorConfig(VectorStoreConfigBase):
-    backend: str = "pgvector"
+class PgVectorConfig(BaseSettings):
+    backend: Literal["pgvector"] = "pgvector"
     dsn: str = ""
     pool_min_size: int = 5
     pool_max_size: int = 20
-    model_config = SettingsConfigDict(env_prefix="PG_VECTOR_")
 
 
-class QdrantConfig(VectorStoreConfigBase):
-    backend: str = "qdrant"
-    url: str
+class QdrantConfig(BaseSettings):
+    backend: Literal["qdrant"] = "qdrant"
+    url: str | None = None  # Remote server URL
+    path: str | None = None  # Local storage directory path
     api_key: str | None = None
     collection_name: str = "embeddings"
-    vector_size: int
+    vector_size: int = 1536
     distance: Literal["cosine", "euclidean", "dot"] = "cosine"
     on_disk: bool = False
-    model_config = SettingsConfigDict(env_prefix="QDRANT_")
 
 
-VectorStoreConfig = Union[PgVectorConfig, QdrantConfig]
+class LLMConfig(BaseSettings):
+    provider: str = "openai"
+    model: str = "gpt-4"
+    api_key: str | None = None
+    timeout: float = 60.0
 
 
 class Settings(BaseSettings):
@@ -111,25 +89,37 @@ class Settings(BaseSettings):
     service_name: str = "doc-talk"
     otlp_endpoint: str = ""  # Jaeger OTLP endpoint
     log_level: str = "INFO"
+    data_dir: str = ""
 
     # Nested configurations
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
     jwt: JWTConfig = Field(default_factory=JWTConfig)
-    vector_store: VectorStoreConfig = Field(default_factory=PgVectorConfig)
-    embeddings_config: EmbeddingsConfig = Field(default_factory=EmbeddingsConfig)
+    qdrant: QdrantConfig = Field(default_factory=QdrantConfig)
+    pgvector: PgVectorConfig = Field(default_factory=PgVectorConfig)
+    embeddings: EmbeddingsConfig = Field(default_factory=EmbeddingsConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         extra="ignore",
+        case_sensitive=False,
+        env_parse_enums=True,
+        # Note: .env variable expansion (${VAR}) requires python-dotenv
+        # Install with: pip install python-dotenv
     )
 
 
-@lru_cache()
+_settings: Settings | None = None
+
+
 def get_settings() -> Settings:
-    """Get cached settings instance."""
-    return Settings()
+    """Get cached settings instance (singleton pattern)."""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]

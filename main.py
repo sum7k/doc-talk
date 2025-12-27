@@ -9,6 +9,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from auth.routers.auth import router as auth_router
+from documents.router import router as documents_router
 from core.exceptions import (
     DomainException,
     ReadinessError,
@@ -59,6 +60,7 @@ app.add_middleware(PrometheusMetricsMiddleware)
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(documents_router)
 
 FastAPIInstrumentor.instrument_app(app)
 

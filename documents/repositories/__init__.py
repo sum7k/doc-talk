@@ -1,4 +1,4 @@
-from ai.documents.repositories.document import (
+from documents.repositories.document import (
     ChunkRepository,
     DocumentRepository,
     PageRepository,

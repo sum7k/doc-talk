@@ -26,10 +26,7 @@ class Document(Base):
 
     source_name: Mapped[str]  # filename / URL / external name
     display_title: Mapped[str | None]  # optional, user-facing
-    binary_content: Mapped[bytes | None] = mapped_column(
-        LargeBinary, nullable=True
-    )  # raw file content (PDF bytes)
-
+    file_path: Mapped[str | None]  # path to stored file, if applicable
     # Chunking configuration used during ingestion
     chunk_size: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_overlap: Mapped[int] = mapped_column(Integer, nullable=False)

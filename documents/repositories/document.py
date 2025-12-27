@@ -5,9 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ai.documents.models.db import Chunk, Document, DocumentStatus, Page
-from ai.documents.models.domain import ChunkDTO, DocumentDTO, PageDTO
-from ai.documents.models.mappers import ChunkMapper, DocumentMapper, PageMapper
+from documents.models.db import Chunk, Document, DocumentStatus, Page
+from documents.models.domain import ChunkDTO, DocumentDTO, PageDTO
+from documents.models.mappers import ChunkMapper, DocumentMapper, PageMapper
 from core.db.repository import Repository
 
 

@@ -6,6 +6,7 @@ from alembic import context  # type: ignore[attr-defined]
 
 # Import all models here so Alembic can detect them for autogenerate
 from auth.models.db import Token, User  # noqa: F401
+from documents.models.db import Document, Page, Chunk # noqa: F401
 from core.database import Base
 from core.settings import get_settings
 

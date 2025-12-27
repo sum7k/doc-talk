@@ -1,4 +1,4 @@
-.PHONY: dev test lint token setup migrate migrate-create migrate-downgrade db-start db-stop db-restart db-logs db-destroy db-status jaeger-start jaeger-stop jaeger-logs loadtest
+.PHONY: dev test lint format token setup migrate migrate-create migrate-downgrade db-start db-stop db-restart db-logs db-destroy db-status jaeger-start jaeger-stop jaeger-logs loadtest
 
 # Run development server
 dev:
@@ -32,8 +32,15 @@ migrate-downgrade:
 	poetry run alembic downgrade -1
 
 # Run linting
+
 lint:
-	poetry run pre-commit run --all-files
+	poetry run ruff check .
+	poetry run ruff format --check .
+	poetry run mypy .
+
+format:
+	poetry run ruff check --fix .
+	poetry run ruff format .
 
 # Generate JWT token for local development
 token:

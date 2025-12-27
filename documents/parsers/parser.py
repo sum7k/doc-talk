@@ -2,7 +2,7 @@ from typing import Protocol
 
 import structlog
 
-from ai.documents.models.domain import PageSchema
+from documents.models.domain import PageSchema
 
 logger = structlog.get_logger()
 

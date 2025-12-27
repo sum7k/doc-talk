@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import Field
 
-from ai.documents.models.db import DocumentStatus
+from documents.models.db import DocumentStatus
+from llm_kit.llms import LLMResponse
 
 # ============================================================================
 # Chunk DTOs
@@ -82,7 +83,7 @@ class CreateDocumentDTO:
     source_name: str
     chunk_size: int
     chunk_overlap: int
-    binary_content: bytes | None = None
+    file_path: str | None = None
     display_title: str | None = None
     status: DocumentStatus = DocumentStatus.UPLOADED
 
@@ -96,7 +97,7 @@ class DocumentDTO:
     status: DocumentStatus
     chunk_size: int
     chunk_overlap: int
-    binary_content: bytes | None = None
+    file_path: str | None = None
     display_title: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -130,3 +131,17 @@ class EmbeddingContext:
     version: str
     namespace: str
 
+@dataclass(frozen=True)
+class CitationDTO:
+    """Citation information for a document."""
+    document_id: str
+    title: str | None
+    page_number: int
+    snippet: str
+
+@dataclass(frozen=True)
+class ChatResponseDTO:
+    """Result of a document query."""
+
+    citations: list[CitationDTO]
+    llm_response: LLMResponse

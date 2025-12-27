@@ -1,5 +1,6 @@
 import asyncio
 from hashlib import sha256
+import uuid
 
 import structlog
 from llm_kit import EmbeddingsClient
@@ -9,8 +10,8 @@ from llm_kit.vectorstores.types import VectorItem
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from ai.documents.models.db import DocumentStatus
-from ai.documents.models.domain import (
+from documents.models.db import DocumentStatus
+from documents.models.domain import (
     ChunkDTO,
     CreateChunkDTO,
     CreateDocumentDTO,
@@ -20,18 +21,19 @@ from ai.documents.models.domain import (
     PageDTO,
     PageSchema,
 )
-from ai.documents.models.schemas import ChunkProfile, FileData
-from ai.documents.parsers.factory import ParserFactory
-from ai.documents.repositories.document import (
+from documents.models.schemas import ChunkProfile, FileData
+from documents.parsers.factory import ParserFactory
+from documents.repositories.document import (
     ChunkRepository,
     DocumentRepository,
     PageRepository,
 )
+from documents.repositories.file import FileRepository
 
 logger = structlog.get_logger(__name__)
 
 
-class DocumentIngestionService:
+class DocumentService:
     """Service for ingesting documents into the vector store.
 
     Handles the complete ingestion pipeline:
@@ -52,6 +54,7 @@ class DocumentIngestionService:
         document_store: DocumentRepository,
         page_store: PageRepository,
         chunk_store: ChunkRepository,
+        file_store: FileRepository,
         parser_factory: ParserFactory = ParserFactory(),
     ) -> None:
         self._embedding_client = embedding_client
@@ -60,6 +63,7 @@ class DocumentIngestionService:
         self._document_store = document_store
         self._page_store = page_store
         self._chunk_store = chunk_store
+        self._file_store = file_store
         self._parser_factory = parser_factory
 
     async def ingest(self, file_data: FileData, chunk_profile: ChunkProfile) -> str:
@@ -118,6 +122,16 @@ class DocumentIngestionService:
                 await self._handle_ingestion_failure(span, document, file_data, e)
                 raise
 
+    async def list_documents(self, skip: int = 0, take: int = 10) -> list[DocumentDTO]:
+        return await self._document_store.list(skip, take)
+
+    async def delete_document(self, document_id: str) -> None:
+        await self._document_store.delete(uuid.UUID(document_id))
+        await self._vector_store.delete(
+            namespace=self._embedding_context.namespace,
+            filters={"document_id": document_id},
+        )
+
     async def _process_document(
         self, document: DocumentDTO, file_data: FileData, chunk_profile: ChunkProfile
     ) -> list[tuple[PageDTO, ChunkDTO]]:
@@ -159,19 +173,20 @@ class DocumentIngestionService:
         """Generate embeddings and store in vector store."""
         texts = [chunk.text_content for _, chunk in page_chunks]
 
-        embeddings = await asyncio.to_thread(self._embedding_client.embed, texts)
+        embeddings = await self._embedding_client.embed(texts)
 
         vectors = [
             VectorItem(
                 id=chunk.id,
                 vector=embedding.vector,
-                metadata=self._build_chunk_metadata(self._embedding_context, document, page, chunk),
+                metadata=self._build_chunk_metadata(
+                    self._embedding_context, document, page, chunk
+                ),
             )
             for embedding, (page, chunk) in zip(embeddings, page_chunks)
         ]
 
-        await asyncio.to_thread(
-            self._vector_store.upsert,
+        await self._vector_store.upsert(
             items=vectors,
             namespace=self._embedding_context.namespace,
         )
@@ -202,7 +217,9 @@ class DocumentIngestionService:
             "chunk_index": chunk.chunk_index,
             "chunk_offset_start": chunk.offset_start,
             "chunk_offset_end": chunk.offset_end,
-            "chunk_content_hash": sha256(chunk.text_content.encode("utf-8")).hexdigest(),
+            "chunk_content_hash": sha256(
+                chunk.text_content.encode("utf-8")
+            ).hexdigest(),
         }
 
     async def _mark_document_ready(self, document: DocumentDTO) -> None:
@@ -294,10 +311,17 @@ class DocumentIngestionService:
         with self.tracer.start_as_current_span("ingestion.save_document") as span:
             span.set_attribute("document.source_name", file_data.file_name)
 
+            # Save file to disk
+            file_path = None
+            if file_data.binary_content:
+                file_path = self._file_store.save_file(
+                    file_data.file_name, file_data.binary_content
+                )
+
             create_dto = CreateDocumentDTO(
                 source_name=file_data.file_name,
                 display_title=file_data.file_name,
-                binary_content=file_data.binary_content,
+                file_path=file_path,
                 chunk_size=chunk_profile.chunk_length,
                 chunk_overlap=chunk_profile.overlap,
                 status=DocumentStatus.INGESTING,
@@ -309,5 +333,6 @@ class DocumentIngestionService:
                 "document_created",
                 document_id=document.id,
                 source_name=file_data.file_name,
+                file_path=file_path,
             )
             return document

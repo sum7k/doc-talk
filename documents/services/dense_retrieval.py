@@ -1,14 +1,12 @@
-import asyncio
 import structlog
+from llm_kit import Embedding, EmbeddingsClient, QueryResult, VectorStore
 
-from llm_kit import QueryResult, Embedding, VectorStore, EmbeddingsClient
-from ai.documents.models.domain import EmbeddingContext
+from documents.models.domain import EmbeddingContext
 
 logger = structlog.get_logger(__name__)
 
 
 class DenseRetrievalService:
-
     def __init__(
         self,
         embedding_client: EmbeddingsClient,
@@ -37,7 +35,7 @@ class DenseRetrievalService:
             namespace=self.embedding_context.namespace,
         )
 
-        query_embeddings: list[Embedding] = self.embedding_client.embed(
+        query_embeddings: list[Embedding] = await self.embedding_client.embed(
             texts=[query],
         )
         logger.debug(
@@ -45,8 +43,7 @@ class DenseRetrievalService:
             vector_dimension=len(query_embeddings[0].vector),
         )
 
-        results: list[QueryResult] = await asyncio.to_thread(
-            self.vector_store.query,
+        results: list[QueryResult] = await self.vector_store.query(
             namespace=self.embedding_context.namespace,
             vector=query_embeddings[0].vector,
             top_k=top_k,

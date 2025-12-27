@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Generic, List, Protocol, TypeVar
 
 T = TypeVar("T")
 TDto = TypeVar("TDto")
@@ -21,6 +21,10 @@ class IRepository(ABC, Generic[T]):
 
     @abstractmethod
     async def get(self, uid: int) -> T:
+        pass
+
+    @abstractmethod
+    async def get_many(self, uids: List[int]) -> List[T]:
         pass
 
     @abstractmethod

@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from ai.documents.models.schemas import FileType
-from ai.documents.parsers.docx_parser import DocxParser
-from ai.documents.parsers.factory import ParserFactory
-from ai.documents.parsers.html_parser import HtmlParser
-from ai.documents.parsers.pdf_parser import PDFParser
-from ai.documents.parsers.text_parser import TextParser
+from documents.models.schemas import FileType
+from documents.parsers.docx_parser import DocxParser
+from documents.parsers.factory import ParserFactory
+from documents.parsers.html_parser import HtmlParser
+from documents.parsers.pdf_parser import PDFParser
+from documents.parsers.text_parser import TextParser
 
 # Path to test fixtures
 FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "fixtures"

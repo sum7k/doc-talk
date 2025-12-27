@@ -1,4 +1,4 @@
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, List, Type, TypeVar
 
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
@@ -27,7 +27,7 @@ class Repository(IRepository[TDto], Generic[TDto, TModel]):
         self._model_class = model_class
         self.mapper = mapper
 
-    async def list(self, skip: int, take: int) -> list[TDto]:
+    async def list(self, skip: int, take: int) -> List[TDto]:
         with self.tracer.start_as_current_span(
             "repository.list",
             attributes={
@@ -58,6 +58,25 @@ class Repository(IRepository[TDto], Generic[TDto, TModel]):
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, "Entity not found"))
                 raise ValueError(f"No {self._model_class.__name__} found with id:{uid}")
+
+    async def get_many(self, uids: List[Any]) -> List[TDto]:
+        with self.tracer.start_as_current_span(
+            "repository.get_many",
+            attributes={
+                "db.model": self._model_class.__name__,
+                "db.id_count": len(uids),
+            },
+        ) as span:
+            if not uids:
+                return []
+
+            result = await self.session.execute(
+                select(self._model_class).where(self._model_class.id.in_(uids))  # type: ignore
+            )
+            entities = result.scalars().all()
+            items = [self.mapper.from_db(entity) for entity in entities]
+            span.set_attribute("db.result_count", len(items))
+            return items
 
     async def create(self, record: Any) -> TDto:
         """Create a new entity from a Create DTO.
@@ -116,7 +135,7 @@ class Repository(IRepository[TDto], Generic[TDto, TModel]):
                 span.set_status(Status(StatusCode.ERROR, "Update failed"))
                 raise
 
-    async def delete(self, uid: int) -> None:
+    async def delete(self, uid: Any) -> None:
         with self.tracer.start_as_current_span(
             "repository.delete",
             attributes={
